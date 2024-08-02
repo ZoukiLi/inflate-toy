@@ -1,4 +1,5 @@
 //! Deal with Huffman encoding and decoding.
+//! This mod focuses on the deflation-independent part of Huffman encoding and decoding.
 //!
 
 /// Huffman tree lookup table.
@@ -9,7 +10,7 @@
 ///
 /// The table size is 2^max_bits. The max_bits is the maximum code length in the Huffman tree.
 /// For the use of lookup table, all index that has a suffix of one code will be filled with the same symbol.
-/// That means, if the max bits is 8, and one code is 0b101, then the table[0b*****101] 
+/// That means, if the max bits is 8, and one code is 0b101, then the table[0b*****101]
 /// will all be the same symbol that the code 0b101 represents.
 /// This will make the lookup process faster.
 ///
@@ -76,24 +77,6 @@ impl HuffmanLookupTable {
         let code = code & mask;
         self.table.get(code).cloned()
     }
-
-    /// Create a fixed literal/length table.
-    /// Defined in RFC 1951, section 3.2.6.
-    pub fn fixed_literal_table() -> Self {
-        let mut code_len = vec![0; 288];
-        (0..144).for_each(|i| code_len[i] = 8);
-        (144..256).for_each(|i| code_len[i] = 9);
-        (256..280).for_each(|i| code_len[i] = 7);
-        (280..288).for_each(|i| code_len[i] = 8);
-        Self::new(&code_len, 9)
-    }
-
-    /// Create a fixed distance table.
-    /// Defined in RFC 1951, section 3.2.6.
-    pub fn fixed_distance_table() -> Self {
-        let code_len = vec![5; 32];
-        Self::new(&code_len, 5)
-    }
 }
 
 #[cfg(test)]
@@ -110,25 +93,4 @@ mod tests {
             assert_eq!(len, code_lengths[symbol]);
         });
     }
-
-    #[test]
-    fn test_fixed_literal_table() {
-        let huffman_table = HuffmanLookupTable::fixed_literal_table();
-        assert_eq!(huffman_table.max_bits, 9);
-        assert_eq!(huffman_table.table[0b0_01111111], (252, 9));
-        assert_eq!(huffman_table.table[0b1_10000000], (256, 7));
-        assert_eq!(huffman_table.table[0b1_00000011], (280, 8));
-        assert_eq!(huffman_table.table[0b0_00001100], (0, 8));
-        assert_eq!(huffman_table.table[0b1_11111111], (255, 9));
-    }
-
-    #[test]
-    fn test_fixed_distance_table() {
-        let huffman_table = HuffmanLookupTable::fixed_distance_table();
-        assert_eq!(huffman_table.max_bits, 5);
-        assert_eq!(huffman_table.table[0b00000], (0, 5));
-        assert_eq!(huffman_table.table[0b11100], (7, 5));
-        assert_eq!(huffman_table.table[0b11111], (31, 5));
-    }
-
 }

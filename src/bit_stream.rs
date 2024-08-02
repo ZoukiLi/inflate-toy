@@ -1,3 +1,4 @@
+//! A module that provides a struct to read bits from a byte array.
 use std::{default, ops};
 
 /// A struct representing the position of a bit in a byte array.

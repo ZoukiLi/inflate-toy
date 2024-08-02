@@ -9,29 +9,62 @@ pub trait Inflate {
     fn inflate_to_vec(&self, data: &[u8]) -> Vec<u8>;
 }
 
-pub struct MinizOxideInflater;
+pub struct MinizOxideInflator;
 
-impl Inflate for MinizOxideInflater {
+impl Inflate for MinizOxideInflator {
     fn inflate_to_vec(&self, data: &[u8]) -> Vec<u8> {
         miniz_oxide::inflate::decompress_to_vec(data).unwrap()
     }
 }
+
+pub struct ToyInflator;
+
+impl Inflate for ToyInflator {
+    fn inflate_to_vec(&self, data: &[u8]) -> Vec<u8> {
+        inflate_toy::inflate::inflate_to_vec(data).unwrap()
+    }
+}
+
 fn get_test_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("data")
 }
 
-const DISPLAY_LEN: usize = 16;
-
+/// Display the data in hex format.
 fn display_data(data: &[u8]) -> String {
-    data.iter()
-        .take(DISPLAY_LEN)
-        .map(|&b| format!("{:02x} ", b))
-        .collect::<String>()
+    let mut result = String::new();
+
+    for (i, chunk) in data.chunks(16).enumerate() {
+        // Print the offset
+        result.push_str(&format!("{:08x}: ", i * 16));
+
+        // Print the byte values in hex
+        for byte in chunk {
+            result.push_str(&format!("{:02x} ", byte));
+        }
+
+        // If the chunk is less than 16 bytes, fill the gap
+        for _ in 0..(16 - chunk.len()) {
+            result.push_str("   ");
+        }
+
+        // Print the ASCII representation
+        result.push_str(" |");
+        for byte in chunk {
+            if byte.is_ascii_graphic() {
+                result.push(*byte as char);
+            } else {
+                result.push('.');
+            }
+        }
+        result.push_str("|\n");
+    }
+
+    result
 }
 
-fn test_inflator<P>(inflater: Box<dyn Inflate>, deflate_path: P, raw_data_path: P) -> Result<()>
+fn test_inflator<P>(inflater: &dyn Inflate, deflate_path: &P, raw_data_path: &P) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -80,14 +113,24 @@ fn get_data_files(file: &str) -> HashMap<String, String> {
     serde_json::from_str(&data_files).unwrap()
 }
 
+const INFLATORS: &[(&str, &dyn Inflate)] = &[
+    ("MinizOxideInflator", &MinizOxideInflator),
+    ("ToyInflator", &ToyInflator),
+];
+
 #[test]
-fn test_miniz_oxide_inflate() -> Result<()> {
+fn test_inflators() -> Result<()> {
     let data_files = get_data_files(DATA_FILES_CONFIG);
-    for (raw, deflate) in data_files {
-        let inflater = Box::new(MinizOxideInflater);
-        let raw_data_path = get_test_dir().join(raw);
-        let deflate_path = get_test_dir().join(deflate);
-        test_inflator(inflater, deflate_path, raw_data_path)?;
+
+    for (name, deflate_path) in data_files {
+        println!("Test: {}", name);
+        let raw_data_path = get_test_dir().join(&name);
+        let deflate_path = get_test_dir().join(&deflate_path);
+        for (inflator_name, inflator) in INFLATORS {
+            println!("Inflator: {}", inflator_name);
+            test_inflator(*inflator, &deflate_path, &raw_data_path)?;
+        }
     }
+
     Ok(())
 }
