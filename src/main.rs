@@ -20,4 +20,39 @@ const DATA_COMPRESSED: &[u8] = &[
 fn main() {
     let data = inflate_to_vec(DATA_COMPRESSED).unwrap();
     println!("{}", String::from_utf8_lossy(&data));
+    println!("Data: \n{}", display_data(&data));
+}
+
+
+/// Display the data in hex format.
+fn display_data(data: &[u8]) -> String {
+    let mut result = String::new();
+
+    for (i, chunk) in data.chunks(16).enumerate() {
+        // Print the offset
+        result.push_str(&format!("{:08x}: ", i * 16));
+
+        // Print the byte values in hex
+        for byte in chunk {
+            result.push_str(&format!("{:02x} ", byte));
+        }
+
+        // If the chunk is less than 16 bytes, fill the gap
+        for _ in 0..(16 - chunk.len()) {
+            result.push_str("   ");
+        }
+
+        // Print the ASCII representation
+        result.push_str(" |");
+        for byte in chunk {
+            if byte.is_ascii_graphic() {
+                result.push(*byte as char);
+            } else {
+                result.push('.');
+            }
+        }
+        result.push_str("|\n");
+    }
+
+    result
 }
