@@ -8,9 +8,11 @@ struct BitPosition {
     pub bit_index: usize,
 }
 
+/// The number of bits in a byte.
 const BITS_PER_BYTE: usize = 8;
 
 impl BitPosition {
+    /// Create a new BitPosition at the beginning of the byte array.
     fn new() -> Self {
         Self {
             byte_index: 0,
@@ -18,6 +20,7 @@ impl BitPosition {
         }
     }
 
+    /// Try to add the given number of bits to the current position.
     fn try_add_bits(&self, bits: usize) -> Option<Self> {
         let byte_added = bits / BITS_PER_BYTE;
         let bit_rem = bits % BITS_PER_BYTE;
@@ -38,10 +41,12 @@ impl BitPosition {
         }
     }
 
+    /// Add the given number of bits to the current position.
     fn add_bits(&self, bits: usize) -> Self {
         self.try_add_bits(bits).unwrap()
     }
 
+    /// Try to add the position of another BitPosition to the current position.
     fn try_add_inner(&self, other: &Self) -> Option<Self> {
         let bits_added = self.try_add_bits(other.bit_index)?;
         Some(Self {
@@ -50,6 +55,7 @@ impl BitPosition {
         })
     }
 
+    /// Add the position of another BitPosition to the current position.
     fn add_inner(&self, other: &Self) -> Self {
         self.try_add_inner(other).unwrap()
     }
@@ -89,6 +95,7 @@ pub struct BitReader<'a> {
 }
 
 impl<'a> BitReader<'a> {
+    /// Create a new BitReader with the given byte array.
     pub fn new(data: &'a [u8]) -> Self {
         Self {
             data,
@@ -97,6 +104,7 @@ impl<'a> BitReader<'a> {
         }
     }
 
+    /// Check if the reader has reached the end of the data.
     pub fn eof(&self) -> bool {
         self.eof
     }
@@ -146,6 +154,7 @@ impl<'a> BitReader<'a> {
         Some(result)
     }
 
+    /// Try to advance the position by the given number of bits.
     pub fn try_advance(&mut self, n_bits: usize) -> Option<()> {
         if self.eof {
             return Some(());
@@ -164,10 +173,12 @@ impl<'a> BitReader<'a> {
         Some(())
     }
 
+    /// Advance the position by the given number of bits.
     pub fn advance(&mut self, n_bits: usize) {
         self.try_advance(n_bits).unwrap();
     }
 
+    /// Try to advance the position to the next byte boundary.
     pub fn try_advance_to_byte_boundary(&mut self) -> Option<()> {
         if self.position.bit_index == 0 {
             return Some(());
@@ -177,33 +188,41 @@ impl<'a> BitReader<'a> {
         Some(())
     }
 
+    /// Advance the position to the next byte boundary.
     pub fn advance_to_byte_boundary(&mut self) {
         self.try_advance_to_byte_boundary().unwrap();
     }
 
+    /// Try to read the given number of bits and advance the position.
     pub fn try_read_bits(&mut self, bits: usize) -> Option<usize> {
         let result = self.try_peek_bits(bits)?;
         self.try_advance(bits)?;
         Some(result)
     }
 
+    /// Peek bits with given bit length without advancing the position.
     pub fn peek_bits(&self, bits: usize) -> usize {
         self.try_peek_bits(bits).unwrap()
     }
 
+    /// Read the given number of bits and advance the position.
     pub fn read_bits(&mut self, bits: usize) -> usize {
         self.try_read_bits(bits).unwrap()
     }
 
+    /// Try to read a byte and advance the position.
     pub fn try_read_byte(&mut self) -> Option<u8> {
         let byte = self.try_read_bits(BITS_PER_BYTE)?;
         Some(byte as u8)
     }
 
+    /// Read a byte and advance the position.
     pub fn read_byte(&mut self) -> u8 {
         self.try_read_byte().unwrap()
     }
 
+    /// Try to read the given number of bytes and fill the buffer.
+    /// Return the number of bytes read.
     pub fn try_read_bytes_to_slice(&mut self, n_bytes: usize, buf: &mut [u8]) -> Option<usize> {
         for byte in buf.iter_mut().take(n_bytes) {
             *byte = self.try_read_byte()?;
@@ -211,6 +230,8 @@ impl<'a> BitReader<'a> {
         Some(n_bytes.min(buf.len()))
     }
 
+    /// Read the given number of bytes and fill the buffer.
+    /// Return the number of bytes read.
     pub fn read_bytes_to_slice(&mut self, n_bytes: usize, buf: &mut [u8]) -> usize {
         self.try_read_bytes_to_slice(n_bytes, buf).unwrap()
     }
